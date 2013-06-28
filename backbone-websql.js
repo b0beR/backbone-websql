@@ -74,14 +74,18 @@
 				model.set(obj);
 			}
 
+			var modelJson = model.toJSON();
+			delete modelJson["id"];
 			var colNames = ["`id`", "`json_data`"];
 			var placeholders = ['?', '?'];
-			var params = [model.attributes[model.idAttribute], JSON.stringify(model.toJSON())];
+			var params = [model.attributes[model.idAttribute], JSON.stringify(modelJson)];
 			this.columns.forEach(function(col) {
 				colNames.push("`" + col.name + "`");
 				placeholders.push(['?']);
-				params.push(model.attributes[col.name]);
+				params.push(modelJson[col.name]);
+				delete modelJson[col.name];
 			});
+			params[1] = JSON.stringify(modelJson);
 			var orReplace = WebSQLStore.insertOrReplace ? ' OR REPLACE' : '';
 			this._executeSql("INSERT" + orReplace + " INTO `" + this.tableName + "`(" + colNames.join(",") + ")VALUES(" + placeholders.join(",") + ");", params, success, error, options);
 		},
@@ -95,13 +99,13 @@
 		find: function (model, success, error, options) {
 			//console.log("sql find");
 			var id = (model.attributes[model.idAttribute] || model.attributes.id);
-			this._executeSql("SELECT `id`, `json_data` FROM `"+this.tableName+"` WHERE(`id`=?);",[model.attributes[model.idAttribute]], success, error, options);
+			this._executeSql("SELECT * FROM `"+this.tableName+"` WHERE(`id`=?);",[model.attributes[model.idAttribute]], success, error, options);
 		},
 		
 		findAll: function (model, success, error, options) {
 			//console.log("sql findAll");
 			var params = [];
-			var sql = "SELECT `id`, `json_data` FROM `"+this.tableName+"`";
+			var sql = "SELECT * FROM `"+this.tableName+"`";
 			if (options.filters) {
 				if (typeof options.filters == 'string') {
 					sql += ' WHERE ' + options.filters;
@@ -182,12 +186,16 @@
 		var isSingleResult = false;
 		
 		success = function (tx, res) {
-			var len = res.rows.length,result, i;
+			var len = res.rows.length,result, i, modelJson;
 			if (len > 0) {
 				result = [];
 
 				for (i=0;i<len;i++) {
-					result.push(JSON.parse(res.rows.item(i).json_data));
+					modelJson = JSON.parse(res.rows.item(i).json_data);
+					store.columns.forEach(function(col) {
+						modelJson[col.name] = res.rows.item(i)[col.name];
+					});
+					result.push(modelJson);
 				}
 				if(isSingleResult && result.length!==0){
 					result = result[0];
