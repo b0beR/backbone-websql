@@ -5,7 +5,7 @@
 	// ====== [UTILS] ======
 	//function for generating "random" id of objects in DB
 	function S4() {
-	   return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+		return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
 	}
 
 	//function guid() {
@@ -51,7 +51,7 @@
 		//db.transaction (function(tx) {
 		//	tx.executeSql("CREATE TABLE IF NOT EXISTS `" + tableName + "` (`id` unique, `value`);",[],success, error);
 		//});
-		var colDefns = ["`id` unique", "`value`"];
+		var colDefns = ["`id` unique", "`json_data`"];
 		colDefns = colDefns.concat(this.columns.map(createColDefn));
 		this._executeSql("CREATE TABLE IF NOT EXISTS `" + tableName + "` (" + colDefns.join(", ") + ");",null,success, error, {});
 	};
@@ -74,7 +74,7 @@
 				model.set(obj);
 			}
 
-			var colNames = ["`id`", "`value`"];
+			var colNames = ["`id`", "`json_data`"];
 			var placeholders = ['?', '?'];
 			var params = [model.attributes[model.idAttribute], JSON.stringify(model.toJSON())];
 			this.columns.forEach(function(col) {
@@ -95,13 +95,13 @@
 		find: function (model, success, error, options) {
 			//console.log("sql find");
 			var id = (model.attributes[model.idAttribute] || model.attributes.id);
-			this._executeSql("SELECT `id`, `value` FROM `"+this.tableName+"` WHERE(`id`=?);",[model.attributes[model.idAttribute]], success, error, options);
+			this._executeSql("SELECT `id`, `json_data` FROM `"+this.tableName+"` WHERE(`id`=?);",[model.attributes[model.idAttribute]], success, error, options);
 		},
 		
 		findAll: function (model, success, error, options) {
 			//console.log("sql findAll");
 			var params = [];
-			var sql = "SELECT `id`, `value` FROM `"+this.tableName+"`";
+			var sql = "SELECT `id`, `json_data` FROM `"+this.tableName+"`";
 			if (options.filters) {
 				if (typeof options.filters == 'string') {
 					sql += ' WHERE ' + options.filters;
@@ -126,7 +126,7 @@
 			//console.log("sql update")
 			var id = (model.attributes[model.idAttribute] || model.attributes.id);
 
-			var setStmts = ["`value`=?"];
+			var setStmts = ["`json_data`=?"];
 			var params = [JSON.stringify(model.toJSON())];
 			this.columns.forEach(function(col) {
 				setStmts.push("`" + col.name + "`=?");
@@ -187,7 +187,7 @@
 				result = [];
 
 				for (i=0;i<len;i++) {
-					result.push(JSON.parse(res.rows.item(i).value));
+					result.push(JSON.parse(res.rows.item(i).json_data));
 				}
 				if(isSingleResult && result.length!==0){
 					result = result[0];
@@ -226,12 +226,12 @@
 
 	var typeMap = {
 		"number": "INTEGER",
-	  "string": "TEXT",
-	  "boolean": "BOOLEAN",
-	  "array": "LIST",
-	  "datetime": "TEXT",
-	  "date": "TEXT",
-	  "object": "TEXT"
+		"string": "TEXT",
+		"boolean": "BOOLEAN",
+		"array": "LIST",
+		"datetime": "TEXT",
+		"date": "TEXT",
+		"object": "TEXT"
 	};
 	function createColDefn(col) {
 		if (col.type && !(col.type in typeMap))
@@ -262,4 +262,4 @@
 	{
 		root.WebSQLStore = factory(root.Backbone)
 	}
-})(this)
+})(this);
