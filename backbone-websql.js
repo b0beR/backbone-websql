@@ -27,6 +27,7 @@
 			+ data4_variant.substr( 3, 1 );
 		return( S4() + S4() + '-' + S4() + '-' + data3_version + '-' + data4_variant + '-' + S4() + S4() + S4());
 	}
+	window.guid = guid;
 
 	// ====== [ WebSQLStore ] ======
 
@@ -75,6 +76,7 @@
 			}
 
 			var modelJson = model.toJSON();
+			delete modelJson[model.idAttribute];
 			delete modelJson["id"];
 			var colNames = ["`id`", "`json_data`"];
 			var placeholders = ['?', '?'];
@@ -191,9 +193,12 @@
 				result = [];
 
 				for (i=0;i<len;i++) {
-					modelJson = JSON.parse(res.rows.item(i).json_data);
+					var item = res.rows.item(i);
+					modelJson = JSON.parse(item.json_data);
+					modelJson[model.idAttribute || model.model.prototype.idAttribute] = item.id;
+					modelJson["id"] = item.id;
 					store.columns.forEach(function(col) {
-						modelJson[col.name] = res.rows.item(i)[col.name];
+						modelJson[col.name] = columnToValue(col, res.rows.item(i)[col.name]);
 					});
 					result.push(modelJson);
 				}
@@ -253,6 +258,26 @@
 				defn += " " + typeMap[col.type];
 		}
 		return defn;
+	}
+	function columnToValue(col, value) {
+		if (col.type && !(col.type in typeMap))
+			throw new Error("Unsupported type: " + col.type);
+		
+		switch (col.type) {
+			case "number":
+				return Number(value);
+			case "boolean":
+				if (value == "true") {
+					return true;
+				} else if (value == "false") {
+					return false;
+				} else {
+					return null;
+				}
+				break;
+			default:
+				return value;
+		}
 	}
 	
 	return WebSQLStore
